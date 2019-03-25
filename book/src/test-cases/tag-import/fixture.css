@@ -1,0 +1,9 @@
+.this-will-not-be-included {
+  display: none;
+}
+
+/* @simport start cool-css */
+.this-will-be-included {
+  display: block;
+}
+/* @simport end cool-css */

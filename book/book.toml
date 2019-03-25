@@ -1,0 +1,10 @@
+[book]
+authors = ["Chinedu Francis Nwafili"]
+multilingual = false
+src = "src"
+title = "The Mdbook Superimport Book"
+
+# @simport start super-section
+[preprocessor.superimport]
+
+# @simport end super-section
