@@ -3,7 +3,7 @@ use log::*;
 use mdbook::book::{Book, Chapter};
 use mdbook::preprocess::{Preprocessor, PreprocessorContext};
 use mdbook::BookItem;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// The pre-processor that powers the mdbook-superimport plugin
 pub struct Superimport;
@@ -90,7 +90,7 @@ impl<'a> Simport<'a> {
                 // cool-css
                 let tag = match remaining.next() {
                     Some(tag) => Some(tag.trim()),
-                    None => None
+                    None => None,
                 };
 
                 Simport {
@@ -105,16 +105,47 @@ impl<'a> Simport<'a> {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Fail, PartialEq)]
 enum TagError {
     #[fail(display = "Could not find `@simport start {}`", tag)]
     MissingStartTag { tag: String },
 }
 
-fn read_content_between_tags<'a>(content: &'a str, tag: &str) -> Result<&'a str, TagError> {
-    let content_between_tags = "";
+impl<'a> Simport<'a> {
+    fn read_content_between_tags(&self) -> Result<String, TagError> {
+        let tag = self.tag.unwrap();
 
-    Ok(content_between_tags)
+        let chapter_dir = self.host_chapter.path.parent().unwrap();
+        let path = Path::join(Path::new(&chapter_dir), &self.file);
+        let content = String::from_utf8(::std::fs::read(&path).unwrap()).unwrap();
+
+        let start_line = content
+            .lines()
+            .enumerate()
+            .filter(|(_line_num, line_content)| line_content.contains("@simport start"))
+            .map(|(line_num, _)| line_num)
+            .next();
+
+        let end_line = content
+            .lines()
+            .enumerate()
+            .filter(|(_line_num, line_content)| line_content.contains("@simport end"))
+            .map(|(line_num, _)| line_num)
+            .next();
+
+        let start_line = start_line.unwrap();
+        let end_line = end_line.unwrap();
+
+        let content_between_tags: Vec<String> = content
+            .lines()
+            .enumerate()
+            .filter(|(line_num, line_content)| *line_num > start_line && *line_num < end_line)
+            .map(|(line_num, line_content)| line_content.to_string())
+            .collect();
+        let content_between_tags = content_between_tags.join("\n");
+
+        Ok(content_between_tags)
+    }
 }
 
 #[cfg(test)]
@@ -134,6 +165,21 @@ mod tests {
         }];
 
         assert_eq!(simports, expected_simports);
+    }
+
+    #[test]
+    fn content_between_tags() {
+        let tag_import_chapter = make_tag_import_chapter();
+
+        let simport = &Simport::parse_chapter(&tag_import_chapter)[0];
+
+        let content_between_tags = simport.read_content_between_tags();
+
+        let expected_content = r#".this-will-be-included {
+  display: block;
+}"#;
+
+        assert_eq!(content_between_tags.unwrap(), expected_content);
     }
 
     // Create a chapter to represent our tag-import test case in the /book
