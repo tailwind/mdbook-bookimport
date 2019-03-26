@@ -29,6 +29,20 @@ impl Preprocessor for Superimport {
 }
 
 fn process_chapter(chapter: &mut Chapter) -> mdbook::errors::Result<()> {
+    let mut content = chapter.content.clone();
+
+    let simports = Simport::parse_chapter(chapter);
+
+    for simport in simports {
+        let new_content = match simport.read_content_between_tags() {
+            Ok(new_content) => new_content,
+            Err(err) => panic!("{:#?}", err) // FIXME: Return failure with `?`
+        };
+
+        // TODO: Replace the line within the content with the new_content
+        // content = new_content
+    }
+
     Ok(())
 }
 
@@ -65,6 +79,10 @@ struct Simport<'a> {
     ///
     /// Some(super-section)
     tag: Option<&'a str>,
+    /// The line in the file that this simport occurs on
+    ///
+    /// 1
+    line: usize,
 }
 
 impl<'a> Simport<'a> {
@@ -72,9 +90,10 @@ impl<'a> Simport<'a> {
         let simports = chapter
             .content
             .lines()
-            .filter(|line| line.contains("#simport"))
+            .enumerate()
+            .filter(|(idx, line)| line.contains("#simport"))
             // [ "{{#simport ./fixture.css@cool-css }}" ] -> Simport { ... }
-            .map(|simport_line| {
+            .map(|(idx, simport_line)| {
                 let mut after_simport = simport_line.split("#simport");
                 after_simport.next().unwrap();
                 // ./fixture.css@cool-css
@@ -97,6 +116,7 @@ impl<'a> Simport<'a> {
                     host_chapter: &chapter,
                     file: file.into(),
                     tag,
+                    line: idx + 1
                 }
             })
             .collect();
@@ -112,6 +132,7 @@ enum TagError {
 }
 
 impl<'a> Simport<'a> {
+    // TODO: Clean up - don't need 3 iterations through the file.. Do it in for loop.
     fn read_content_between_tags(&self) -> Result<String, TagError> {
         let tag = self.tag.unwrap();
 
@@ -133,6 +154,7 @@ impl<'a> Simport<'a> {
             .map(|(line_num, _)| line_num)
             .next();
 
+        // FIXME: Return TagError if there is no start or end tag in the file
         let start_line = start_line.unwrap();
         let end_line = end_line.unwrap();
 
@@ -162,6 +184,7 @@ mod tests {
             host_chapter: &tag_import_chapter,
             file: "./fixture.css".into(),
             tag: Some("cool-css"),
+            line: 4
         }];
 
         assert_eq!(simports, expected_simports);
