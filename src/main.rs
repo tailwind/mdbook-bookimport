@@ -1,6 +1,9 @@
+#[macro_use]
+extern crate log;
+
 use env_logger::Builder;
 
-use std::env;
+use std::{env, process};
 use log::LevelFilter;
 use chrono::Local;
 
@@ -10,13 +13,53 @@ use mdbook::{
     preprocess::{CmdPreprocessor, Preprocessor, PreprocessorContext},
 };
 use mdbook_superimport::Superimport;
+use std::io::{stdin, Read};
+use clap::{App, SubCommand, Arg, ArgMatches};
 
-fn main() -> mdbook::errors::Result<()> {
+pub fn make_app() -> App<'static, 'static> {
+    App::new("mdbook-superimport")
+        .about("A mdbook preprocessor which does precisely nothing")
+        .subcommand(
+            SubCommand::with_name("supports")
+                .arg(Arg::with_name("renderer").required(true))
+                .about("Check whether a renderer is supported by this preprocessor"),
+        )
+}
+
+fn main() {
     init_logging();
 
-    let (ctx, book) = CmdPreprocessor::parse_input(::std::io::stdin())?;
+    let matches = make_app().get_matches();
+
 
     let superimport = Superimport {};
+
+    if let Some(sub_args) = matches.subcommand_matches("supports") {
+        handle_supports(&superimport, sub_args);
+    } else {
+        if let Err(e) = handle_preprocessing(&superimport) {
+            eprintln!("{}", e);
+            process::exit(1);
+        }
+    }
+
+
+}
+
+fn handle_supports(superimport: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {
+    let renderer = sub_args.value_of("renderer").expect("Required argument");
+    let supported = superimport.supports_renderer(&renderer);
+
+    // Signal whether the renderer is supported by exiting with 1 or 0.
+    if supported {
+        process::exit(0);
+    } else {
+        process::exit(1);
+    }
+}
+
+fn handle_preprocessing(superimport: &dyn Preprocessor) -> Result<(), Error> {
+    let (ctx, book) = CmdPreprocessor::parse_input(::std::io::stdin())?;
 
     let book_after_superimport = superimport.run(&ctx, book)?;
 

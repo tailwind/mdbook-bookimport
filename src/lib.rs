@@ -20,36 +20,56 @@ impl Preprocessor for Superimport {
         ctx: &PreprocessorContext,
         mut book: Book,
     ) -> Result<Book, mdbook::errors::Error> {
+        debug!("Running `run` method in superimport Preprocessor trait impl");
+
+        let book_src_dir = ctx.root.join(&ctx.config.book.src);
+
         for section in book.sections.iter_mut() {
-            if let BookItem::Chapter(ref mut chapter) = section {
-                process_chapter(chapter)?;
-            }
+            process_chapter(section, &book_src_dir);
         }
 
         Ok(book)
     }
 }
 
-fn process_chapter(chapter: &mut Chapter) -> mdbook::errors::Result<()> {
-    let mut content = chapter.content.clone();
+fn process_chapter(book_item: &mut BookItem, book_src_dir: &PathBuf) -> mdbook::errors::Result<()> {
+    // FIXME: Make process_chapter method take the BookItem
+    if let BookItem::Chapter(ref mut chapter) = book_item {
+        debug!("Processing chapter {}", chapter.name);
 
-    let simports = Simport::parse_chapter(chapter);
+        let chapter_dir = chapter
+            .path
+            .parent()
+            .map(|dir| book_src_dir.join(dir))
+            .expect("All book items have a parent");
 
-    // Iterate backwards through the simports so that we start by replacing the imports
-    // that are lower in the file first.
-    //
-    // This ensures that as we replace simports we aren't throwing off the start and end
-    // indices of other simports.
-    for simport in simports.iter().rev() {
-        let new_content = match simport.read_content_between_tags() {
-            Ok(new_content) => new_content,
-            Err(err) => panic!("{:#?}", err), // FIXME: Return failure with `?`
-        };
+        let mut content = chapter.content.clone();
 
-        content = content.replace(simport.full_simport_text, &new_content);
+        let simports = Simport::parse_chapter(chapter);
+
+        // Iterate backwards through the simports so that we start by replacing the imports
+        // that are lower in the file first.
+        //
+        // This ensures that as we replace simports we aren't throwing off the start and end
+        // indices of other simports.
+        for simport in simports.iter().rev() {
+            // TODO: BREADCRUMB If the full_simport_text begins with a `\` just continue.
+            // Write a test case for this by importing from our test-cases directory
+
+            let new_content = match simport.read_content_between_tags(&chapter_dir) {
+                Ok(new_content) => new_content,
+                Err(err) => panic!("{:#?}", err), // FIXME: Return failure with `?`
+            };
+
+            content = content.replace(simport.full_simport_text, &new_content);
+        }
+
+        chapter.content = content;
+
+        for sub_item in chapter.sub_items.iter_mut() {
+            process_chapter(sub_item, book_src_dir)?;
+        }
     }
-
-    chapter.content = content;
 
     Ok(())
 }
@@ -121,21 +141,33 @@ lazy_static! {
 }
 
 impl<'a> Simport<'a> {
-    fn parse_chapter<'c>(chapter: &'c Chapter) -> Vec<Simport<'c>> {
+    fn parse_chapter(chapter: &Chapter) -> Vec<Simport> {
         let mut simports = vec![];
 
         let matches = RE.captures_iter(chapter.content.as_str());
 
         for capture_match in matches {
             // {{#simport ./fixture.css@cool-css }}
+            //    OR
+            // \{{#simport ./fixture.css@cool-css }}
             let full_capture = capture_match.get(0).unwrap();
+
+            let full_simport_text = &chapter.content[full_capture.start()..full_capture.end()];
+
+            // NOTE: The backslash means that this import was escaped by the author, so
+            // we don't want to replace it.
+            // \{{#simport ./fixture.css@cool-css }}
+            if full_simport_text.starts_with(r"\") {
+                continue;
+            }
+
             let file = capture_match["file"].into();
             let tag = capture_match.get(2).unwrap();
 
             let simport = Simport {
                 host_chapter: chapter,
                 file,
-                full_simport_text: &chapter.content[full_capture.start()..full_capture.end()],
+                full_simport_text,
                 tag: &chapter.content[tag.start()..tag.end()],
                 start: full_capture.start(),
                 end: full_capture.end(),
@@ -156,11 +188,16 @@ enum TagError {
 
 impl<'a> Simport<'a> {
     // TODO: Clean up - don't need 3 iterations through the file.. Do it in for loop.
-    fn read_content_between_tags(&self) -> Result<String, TagError> {
+    fn read_content_between_tags(&self, chapter_dir: &PathBuf) -> Result<String, TagError> {
+        debug!(
+            r#"Reading content in chapter "{}" for simport "{:#?}" "#,
+            self.host_chapter.name, self.full_simport_text
+        );
+
         let tag = self.tag;
 
-        let chapter_dir = self.host_chapter.path.parent().unwrap();
-        let path = Path::join(Path::new(&chapter_dir), &self.file);
+        let path = Path::join(&chapter_dir, &self.file);
+
         let content = String::from_utf8(::std::fs::read(&path).unwrap()).unwrap();
 
         let start_line = content
@@ -221,7 +258,10 @@ mod tests {
 
         let simport = &Simport::parse_chapter(&tag_import_chapter)[0];
 
-        let content_between_tags = simport.read_content_between_tags();
+        let chapter_dir = "book/src/test-cases/tag-import";
+        let chapter_dir = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), chapter_dir);
+
+        let content_between_tags = simport.read_content_between_tags(&chapter_dir.into());
 
         let expected_content = r#".this-will-be-included {
   display: block;
@@ -233,8 +273,9 @@ mod tests {
     #[test]
     fn replace_chapter() {
         let mut tag_import_chapter = make_tag_import_chapter();
+        let mut item = BookItem::Chapter(tag_import_chapter);
 
-        process_chapter(&mut tag_import_chapter);
+        process_chapter(&mut item, &"".into());
 
         let expected_content = r#"# Tag Import
 
@@ -244,7 +285,36 @@ mod tests {
 }
 ```
 "#;
-        assert_eq!(tag_import_chapter.content.as_str(), expected_content);
+        match item {
+            BookItem::Chapter(tag_import_chapter) => {
+                assert_eq!(tag_import_chapter.content.as_str(), expected_content);
+            }
+            _ => panic!(""),
+        };
+    }
+
+    #[test]
+    fn replace_escaped_simport() {
+        let mut escaped_import_chapter = make_escaped_import_chapter();
+
+        let expected_content = escaped_import_chapter.content.clone();
+        let expected_content = r#"# Escaped Sinclude
+
+```
+\{{#sinclude ./ignored.txt@foo-bar}}
+```
+"#;
+
+        let mut item = BookItem::Chapter(escaped_import_chapter);
+
+        process_chapter(&mut item, &"".into());
+
+        match item {
+            BookItem::Chapter(escaped_chapter) => {
+                assert_eq!(escaped_chapter.content.as_str(), expected_content);
+            }
+            _ => panic!(""),
+        };
     }
 
     // Create a chapter to represent our tag-import test case in the /book
@@ -255,6 +325,21 @@ mod tests {
         let tag_import_chapter = Chapter::new(
             "Tag Import",
             include_str!("../book/src/test-cases/tag-import/README.md").to_string(),
+            &format!("{}/{}", env!("CARGO_MANIFEST_DIR"), chapter),
+            vec![],
+        );
+
+        tag_import_chapter
+    }
+
+    // Create a chapter to represent our Escaped test case in the /book
+    // directory in this repo.
+    fn make_escaped_import_chapter() -> Chapter {
+        let chapter = "book/src/test-cases/escaped/README.md";
+
+        let tag_import_chapter = Chapter::new(
+            "Escaped",
+            include_str!("../book/src/test-cases/escaped/README.md").to_string(),
             &format!("{}/{}", env!("CARGO_MANIFEST_DIR"), chapter),
             vec![],
         );
