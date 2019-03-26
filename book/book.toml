@@ -4,7 +4,7 @@ multilingual = false
 src = "src"
 title = "The Mdbook Superimport Book"
 
-# @simport start super-section
+# @superimport start super-section
 [preprocessor.superimport]
 
-# @simport end super-section
+# @superimport end super-section

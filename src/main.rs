@@ -3,10 +3,11 @@ extern crate log;
 
 use env_logger::Builder;
 
-use std::{env, process};
-use log::LevelFilter;
 use chrono::Local;
+use log::LevelFilter;
+use std::{env, process};
 
+use clap::{App, Arg, ArgMatches, SubCommand};
 use mdbook::{
     book::{Book, BookItem},
     errors::{Error, Result as MdResult},
@@ -14,7 +15,6 @@ use mdbook::{
 };
 use mdbook_superimport::Superimport;
 use std::io::{stdin, Read};
-use clap::{App, SubCommand, Arg, ArgMatches};
 
 pub fn make_app() -> App<'static, 'static> {
     App::new("mdbook-superimport")
@@ -31,7 +31,6 @@ fn main() {
 
     let matches = make_app().get_matches();
 
-
     let superimport = Superimport {};
 
     if let Some(sub_args) = matches.subcommand_matches("supports") {
@@ -42,8 +41,6 @@ fn main() {
             process::exit(1);
         }
     }
-
-
 }
 
 fn handle_supports(superimport: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {

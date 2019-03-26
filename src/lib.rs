@@ -45,7 +45,7 @@ fn process_chapter(book_item: &mut BookItem, book_src_dir: &PathBuf) -> mdbook::
 
         let mut content = chapter.content.clone();
 
-        let simports = Simport::parse_chapter(chapter);
+        let simports = SuperImport::parse_chapter(chapter);
 
         // Iterate backwards through the simports so that we start by replacing the imports
         // that are lower in the file first.
@@ -79,22 +79,22 @@ fn process_chapter(book_item: &mut BookItem, book_src_dir: &PathBuf) -> mdbook::
 /// If you look at book/src/introduction.md you'll see this super import:
 ///
 /// ```md,ignore
-/// {{#simport ../book.toml@super-section }}
+/// {{#superimport ../book.toml@super-section }}
 /// ```
 ///
 /// Which refers to this part of our book/book.toml
 ///
 /// ```toml,ignore
-/// # @simport start super-section
+/// # @superimport start super-section
 /// [preprocessor.superimport]
 /// // ...
-/// # @simport end super-section
+/// # @superimport end super-section
 /// ```
 ///
-/// The doc comments on the struct fields refer to this simport
+/// The doc comments on the struct fields refer to this superimport
 #[derive(Debug, PartialEq)]
-struct Simport<'a> {
-    /// The book chapter that this #simport was found in
+struct SuperImport<'a> {
+    /// The book chapter that this #superimport was found in
     ///
     /// introduction.md
     host_chapter: &'a Chapter,
@@ -102,35 +102,35 @@ struct Simport<'a> {
     ///
     /// ../book.toml
     file: PathBuf,
-    /// The text of this simport in the host_chapter
+    /// The text of this superimport in the host_chapter
     ///
-    /// {{ #simport some-file.txt@some-tag }}
+    /// {{ #superimport some-file.txt@some-tag }}
     full_simport_text: &'a str,
     /// Tags after the characters after an `@` symbol. When importing from a file
     /// Superimport will pull all text before and after the `@tag`
     ///
     /// Some(super-section)
     tag: &'a str,
-    /// Where in the chapter's bytes does this simport start?
+    /// Where in the chapter's bytes does this superimport start?
     start: usize,
-    /// Where in the chapter's bytes does this simport end?
+    /// Where in the chapter's bytes does this superimport end?
     end: usize,
 }
 
 // Wrapping in lazy_static ensures that our regex is only compiled once
 lazy_static! {
-  /// The regex that finds simports such as -> `{{ #simport some-file.txt@some-tag }}`
+  /// The regex that finds superimports such as -> `{{ #superimport some-file.txt@some-tag }}`
   static ref RE: Regex = Regex::new(
   r"(?x)                        # (?x) means insignificant whitespace mode
                                 # allows us to put comments and space things out.
 
-    \\\{\{\#.*\}\}                # escaped import such as `\{{ #simport some-file.txt@some-tag }}`
+    \\\{\{\#.*\}\}                # escaped import such as `\{{ #superimport some-file.txt@some-tag }}`
 
   |                               # OR
 
-                                  # Non escaped import -> `{{ #simport some-file.txt@some-tag }}`
+                                  # Non escaped import -> `{{ #superimport some-file.txt@some-tag }}`
     \{\{\s*                         # opening braces and whitespace
-    \#simport                       # #simport
+    \#superimport                       # #superimport
     \s+                             # separating whitespace
     (?P<file>[a-zA-Z0-9\s_.\-/\\]+) # some-file.txt
     @                               # @ symbol that denotes the name of a tag
@@ -140,23 +140,23 @@ lazy_static! {
   ).unwrap();
 }
 
-impl<'a> Simport<'a> {
-    fn parse_chapter(chapter: &Chapter) -> Vec<Simport> {
+impl<'a> SuperImport<'a> {
+    fn parse_chapter(chapter: &Chapter) -> Vec<SuperImport> {
         let mut simports = vec![];
 
         let matches = RE.captures_iter(chapter.content.as_str());
 
         for capture_match in matches {
-            // {{#simport ./fixture.css@cool-css }}
+            // {{#superimport ./fixture.css@cool-css }}
             //    OR
-            // \{{#simport ./fixture.css@cool-css }}
+            // \{{#superimport ./fixture.css@cool-css }}
             let full_capture = capture_match.get(0).unwrap();
 
             let full_simport_text = &chapter.content[full_capture.start()..full_capture.end()];
 
             // NOTE: The backslash means that this import was escaped by the author, so
             // we don't want to replace it.
-            // \{{#simport ./fixture.css@cool-css }}
+            // \{{#superimport ./fixture.css@cool-css }}
             if full_simport_text.starts_with(r"\") {
                 continue;
             }
@@ -164,7 +164,7 @@ impl<'a> Simport<'a> {
             let file = capture_match["file"].into();
             let tag = capture_match.get(2).unwrap();
 
-            let simport = Simport {
+            let simport = SuperImport {
                 host_chapter: chapter,
                 file,
                 full_simport_text,
@@ -182,15 +182,15 @@ impl<'a> Simport<'a> {
 
 #[derive(Debug, Fail, PartialEq)]
 enum TagError {
-    #[fail(display = "Could not find `@simport start {}`", tag)]
+    #[fail(display = "Could not find `@superimport start {}`", tag)]
     MissingStartTag { tag: String },
 }
 
-impl<'a> Simport<'a> {
+impl<'a> SuperImport<'a> {
     // TODO: Clean up - don't need 3 iterations through the file.. Do it in for loop.
     fn read_content_between_tags(&self, chapter_dir: &PathBuf) -> Result<String, TagError> {
         debug!(
-            r#"Reading content in chapter "{}" for simport "{:#?}" "#,
+            r#"Reading content in chapter "{}" for superimport "{:#?}" "#,
             self.host_chapter.name, self.full_simport_text
         );
 
@@ -203,14 +203,14 @@ impl<'a> Simport<'a> {
         let start_line = content
             .lines()
             .enumerate()
-            .filter(|(_line_num, line_content)| line_content.contains("@simport start"))
+            .filter(|(_line_num, line_content)| line_content.contains("@superimport start"))
             .map(|(line_num, _)| line_num)
             .next();
 
         let end_line = content
             .lines()
             .enumerate()
-            .filter(|(_line_num, line_content)| line_content.contains("@simport end"))
+            .filter(|(_line_num, line_content)| line_content.contains("@superimport end"))
             .map(|(line_num, _)| line_num)
             .next();
 
@@ -238,15 +238,15 @@ mod tests {
     fn parse_simports_from_chapter() {
         let tag_import_chapter = make_tag_import_chapter();
 
-        let simports = Simport::parse_chapter(&tag_import_chapter);
+        let simports = SuperImport::parse_chapter(&tag_import_chapter);
 
-        let expected_simports = vec![Simport {
+        let expected_simports = vec![SuperImport {
             host_chapter: &tag_import_chapter,
             file: "./fixture.css".into(),
-            full_simport_text: "{{#simport ./fixture.css@cool-css }}",
+            full_simport_text: "{{#superimport ./fixture.css@cool-css }}",
             tag: "cool-css",
             start: 20,
-            end: 56,
+            end: 60,
         }];
 
         assert_eq!(simports, expected_simports);
@@ -256,7 +256,7 @@ mod tests {
     fn content_between_tags() {
         let tag_import_chapter = make_tag_import_chapter();
 
-        let simport = &Simport::parse_chapter(&tag_import_chapter)[0];
+        let simport = &SuperImport::parse_chapter(&tag_import_chapter)[0];
 
         let chapter_dir = "book/src/test-cases/tag-import";
         let chapter_dir = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), chapter_dir);

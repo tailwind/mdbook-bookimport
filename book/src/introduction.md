@@ -25,7 +25,7 @@ cargo install mdbook-superimport
 ## In your book.toml
 
 ```md
-{{#simport ../book.toml@super-section }}
+{{#superimport ../book.toml@super-section }}
 ```
 
 ## Usage
@@ -49,13 +49,13 @@ labeled `super-section`.
 
 ```sh
 # Without the back slash
-\{{#simport ../book.toml@super-section }}
+\{{#superimport ../book.toml@super-section }}
 ```
 
 ```css
 
-# @simport start super-section
+# @superimport start super-section
 src = "src"
 title = "The Mdbook Superimport Book"
-# @simport end super-section
+# @superimport end super-section
 ```

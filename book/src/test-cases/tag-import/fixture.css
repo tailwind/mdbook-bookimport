@@ -2,8 +2,8 @@
   display: none;
 }
 
-/* @simport start cool-css */
+/* @superimport start cool-css */
 .this-will-be-included {
   display: block;
 }
-/* @simport end cool-css */
+/* @superimport end cool-css */
