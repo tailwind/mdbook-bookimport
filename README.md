@@ -62,7 +62,7 @@ fn main () {
 ## To Test
 
 ```sh
-cargo test --all
+./test.sh
 ```
 
 ## See Also

@@ -1,3 +1,8 @@
+//! mdbook-superimport is a pre-processor for [mdbook]'s that helps you avoid link rot
+//! when importing parts of other files into your mdbook.
+//!
+//! [mdbook]: https://github.com/rust-lang-nursery/mdBook
+
 #![deny(missing_docs, warnings)]
 
 use failure::Fail;
@@ -67,7 +72,7 @@ fn process_chapter(book_item: &mut BookItem, book_src_dir: &PathBuf) -> mdbook::
         for simport in simports.iter().rev() {
             let new_content = match simport.read_content_between_tags(&chapter_dir) {
                 Ok(new_content) => new_content,
-                Err(err) => panic!("{:#?}", err),
+                Err(err) => panic!("Error reading content for superimport: {:#?}", err),
             };
 
             // Replace the #superimport in the chapter with the contents that we were
@@ -199,6 +204,7 @@ impl<'a> SuperImport<'a> {
     }
 }
 
+// TODO: Create TagError variants and add better error handling.
 #[derive(Debug, Fail, PartialEq)]
 enum TagError {
     #[fail(display = "Could not find `@superimport start {}`", tag)]
@@ -207,7 +213,7 @@ enum TagError {
 }
 
 impl<'a> SuperImport<'a> {
-    // TODO: Clean up - don't need 3 iterations through the file.. Do it in for loop.
+    /// TODO: Return failure::Error instead if TagError
     fn read_content_between_tags(&self, chapter_dir: &PathBuf) -> Result<String, TagError> {
         debug!(
             r#"Reading content in chapter "{}" for superimport "{:#?}" "#,
@@ -218,31 +224,44 @@ impl<'a> SuperImport<'a> {
 
         let content = String::from_utf8(::std::fs::read(&path).unwrap()).unwrap();
 
-        let start_line = content
-            .lines()
-            .enumerate()
-            .filter(|(_line_num, line_content)| line_content.contains("@superimport start"))
-            .map(|(line_num, _)| line_num)
-            .next();
+        // @superimport start foo <--- this line is not captured
+        // ... match all of these
+        // ... lines between the
+        // ... start and end tags <--- this line is not captured
+        // @superimport end foo
+        let start_regex = Regex::new(&format!(
+            r"(?x)         # Insignificant whitespace mode (allows for comments)
+@superimport
+\s+                        # Separating whitespace
+start
+\s+                        # Separating whitespace
+{tag}
 
-        let end_line = content
-            .lines()
-            .enumerate()
-            .filter(|(_line_num, line_content)| line_content.contains("@superimport end"))
-            .map(|(line_num, _)| line_num)
-            .next();
+.*?                        # Characters between start import tag and end of line
 
-        // FIXME: Return TagError if there is no start or end tag in the file
-        let start_line = start_line.unwrap();
-        let end_line = end_line.unwrap();
+[\n\r]                     # New line right before the start import tag
 
-        let content_between_tags: Vec<String> = content
-            .lines()
-            .enumerate()
-            .filter(|(line_num, _line_content)| *line_num > start_line && *line_num < end_line)
-            .map(|(_line_num, line_content)| line_content.to_string())
-            .collect();
-        let content_between_tags = content_between_tags.join("\n");
+(?P<content_to_import>     # Everything in between the start and end import lines
+  (.|\n|\r)*
+)
+
+[\n\r]                     # New line right before the end import tag
+
+.*?                        # Characters between start of end import line and end import tag
+
+@superimport
+\s+                        # Separating whitespace
+end
+\s+                        # Separating whitespace
+{tag}
+",
+            tag = regex::escape(self.tag)
+        ))
+        .unwrap();
+
+        let captures = start_regex.captures(&content).unwrap();
+
+        let content_between_tags = captures["content_to_import"].to_string();
 
         Ok(content_between_tags)
     }
@@ -281,9 +300,11 @@ mod tests {
 
         let content_between_tags = simport.read_content_between_tags(&chapter_dir.into());
 
-        let expected_content = r#".this-will-be-included {
+        let expected_content = r#"
+.this-will-be-included {
   display: block;
-}"#;
+}
+"#;
 
         assert_eq!(content_between_tags.unwrap(), expected_content);
     }
@@ -298,9 +319,11 @@ mod tests {
         let expected_content = r#"# Tag Import
 
 ```md
+
 .this-will-be-included {
   display: block;
 }
+
 ```
 "#;
         match item {

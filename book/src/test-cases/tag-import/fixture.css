@@ -3,7 +3,9 @@
 }
 
 /* @superimport start cool-css */
+
 .this-will-be-included {
   display: block;
 }
+
 /* @superimport end cool-css */

@@ -1,3 +1,8 @@
+//! mdbook-superimport is a pre-processor for [mdbook]'s that helps you avoid link rot
+//! when importing parts of other files into your mdbook.
+//!
+//! [mdbook]: https://github.com/rust-lang-nursery/mdBook
+
 #![deny(missing_docs, warnings)]
 
 #[macro_use]
@@ -11,27 +16,15 @@ use std::{env, process};
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 use mdbook::{
-    book::{Book, BookItem},
-    errors::{Error, Result as MdResult},
-    preprocess::{CmdPreprocessor, Preprocessor, PreprocessorContext},
+    errors::Error,
+    preprocess::{CmdPreprocessor, Preprocessor},
 };
 use mdbook_superimport::Superimport;
-use std::io::{stdin, Read};
-
-pub fn make_app() -> App<'static, 'static> {
-    App::new("mdbook-superimport")
-        .about("A mdbook preprocessor which does precisely nothing")
-        .subcommand(
-            SubCommand::with_name("supports")
-                .arg(Arg::with_name("renderer").required(true))
-                .about("Check whether a renderer is supported by this preprocessor"),
-        )
-}
 
 fn main() {
     init_logging();
 
-    let matches = make_app().get_matches();
+    let matches = make_cli().get_matches();
 
     let superimport = Superimport {};
 
@@ -39,12 +32,24 @@ fn main() {
         handle_supports(&superimport, sub_args);
     } else {
         if let Err(e) = handle_preprocessing(&superimport) {
-            eprintln!("{}", e);
+            error!("{}", e);
             process::exit(1);
         }
     }
 }
 
+// Used by mdbook to determine whether or not our binary can be used as a pre-processor
+fn make_cli() -> App<'static, 'static> {
+    App::new("mdbook-superimport")
+        .about("Import code/text from other files into your mdbook - without the link rot.")
+        .subcommand(
+            SubCommand::with_name("supports")
+                .arg(Arg::with_name("renderer").required(true))
+                .about("Check whether a renderer is supported by this preprocessor"),
+        )
+}
+
+// Used by mdbook to determine whether or not our binary can be used as a pre-processor
 fn handle_supports(superimport: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {
     let renderer = sub_args.value_of("renderer").expect("Required argument");
     let supported = superimport.supports_renderer(&renderer);
@@ -57,6 +62,7 @@ fn handle_supports(superimport: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {
     }
 }
 
+// Run our preprocessor to replace #superimport's in every chapter in an mdbook
 fn handle_preprocessing(superimport: &dyn Preprocessor) -> Result<(), Error> {
     let (ctx, book) = CmdPreprocessor::parse_input(::std::io::stdin())?;
 
