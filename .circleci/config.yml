@@ -11,6 +11,7 @@ jobs:
       - restore_cache:
           keys:
             - v1-cargo-cache-test-{{ arch }}-{{ .Branch }}
+            - v1-cargo-cache-test-{{ arch }}
 
       # Install nightly & wasm
       - run:
@@ -29,12 +30,7 @@ jobs:
 
       # Save cache
       - save_cache:
-          key: v1-cargo-cache-test-{{ arch }}-{{ .Branch }}-{{ checksum "./crates/html-macro/Cargo.toml" }}-{{ checksum "./crates/virtual-dom-rs/Cargo.toml" }}
-          paths:
-            - target
-            - /usr/local/cargo
-      - save_cache:
-          key: v1-cargo-cache-test-{{ arch }}-{{ checksum "./crates/html-macro/Cargo.toml" }}-{{ checksum "./crates/virtual-dom-rs/Cargo.toml" }}
+          key: v1-cargo-cache-test-{{ arch }}-{{ .Branch }}
           paths:
             - target
             - /usr/local/cargo
@@ -48,6 +44,7 @@ jobs:
       - restore_cache:
           keys:
             - v1-cargo-cache-docs-{{ arch }}-{{ .Branch }}
+            - v1-cargo-cache-docs-{{ arch }}
 
       # Install nightly
       - run:
@@ -86,11 +83,6 @@ jobs:
           paths:
             - target
             - /usr/local/cargo
-      - save_cache:
-          key: v1-cargo-cache-docs-{{ arch }}
-          paths:
-            - target
-            - /usr/local/cargo
 
   docs-deploy:
     docker:
@@ -110,7 +102,7 @@ jobs:
             && git config user.name "ci-build"
       - add_ssh_keys:
           fingerprints:
-            - "71:95:d0:f5:0d:f6:fe:2a:9d:62:d7:4e:9a:6f:8e:8d"
+            - "e6:88:2d:b4:4d:bc:48:2c:25:42:c7:0c:73:0b:2e:b1"
       - run:
           name: Deploy docs to gh-pages branch
           command: gh-pages --dotfiles --message "[skip ci] Updates" --dist book/book
