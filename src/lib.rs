@@ -316,6 +316,7 @@ mod tests {
 
         process_chapter(&mut item, &"".into()).unwrap();
 
+        // Spacing an indentation is intentional
         let expected_content = r#"# Tag Import
 
 ```md
@@ -338,6 +339,7 @@ mod tests {
     fn replace_escaped_simport() {
         let escaped_import_chapter = make_escaped_import_chapter();
 
+        // Spacing an indentation is intentional
         let expected_content = r#"# Escaped Superimport
 
 ```
