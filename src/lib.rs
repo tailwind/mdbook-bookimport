@@ -14,6 +14,10 @@ use mdbook::BookItem;
 use regex::Regex;
 use std::path::{Path, PathBuf};
 
+// Originally tried using "\" but ran into issues with mdbook seemingly stripping it.
+// Probably because it also uses "\" to escape it's imports
+static _ESCAPE_CHAR: &'static str = "/";
+
 /// The pre-processor that powers the mdbook-superimport plugin
 pub struct Superimport;
 
@@ -147,7 +151,7 @@ lazy_static! {
   r"(?x)                        # (?x) means insignificant whitespace mode
                                 # allows us to put comments and space things out.
 
-    \\\{\{\#.*\}\}                # escaped import such as `\{{ #superimport some-file.txt@some-tag }}`
+    /\{\{\#.*\}\}                # escaped import such as `/{{ #superimport some-file.txt@some-tag }}`
 
   |                               # OR
 
@@ -173,15 +177,15 @@ impl<'a> SuperImport<'a> {
         for capture_match in matches {
             // {{#superimport ./fixture.css@cool-css }}
             //    OR
-            // \{{#superimport ./fixture.css@cool-css }}
+            // #{{#superimport ./fixture.css@cool-css }}
             let full_capture = capture_match.get(0).unwrap();
 
             let full_simport_text = &chapter.content[full_capture.start()..full_capture.end()];
 
             // NOTE: The backslash means that this import was escaped by the author, so
             // we don't want to replace it.
-            // \{{#superimport ./fixture.css@cool-css }}
-            if full_simport_text.starts_with(r"\") {
+            // /{{#superimport ./fixture.css@cool-css }}
+            if full_simport_text.starts_with(r"/") {
                 continue;
             }
 
@@ -290,6 +294,15 @@ mod tests {
     }
 
     #[test]
+    fn ignore_escaped_simport() {
+        let escaped_import_chapter = make_escaped_import_chapter();
+
+        let simports = SuperImport::find_unescaped_superimports(&escaped_import_chapter);
+
+        assert_eq!(simports.len(), 0);
+    }
+
+    #[test]
     fn content_between_tags() {
         let tag_import_chapter = make_tag_import_chapter();
 
@@ -339,11 +352,12 @@ mod tests {
     fn replace_escaped_simport() {
         let escaped_import_chapter = make_escaped_import_chapter();
 
-        // Spacing an indentation is intentional
+        // Spacing an indentation is intentional.
+        // We're testing that the
         let expected_content = r#"# Escaped Superimport
 
 ```
-\{{#superimport ./ignored.txt@foo-bar}}
+/{{#superimport ./ignored.txt@foo-bar}}
 ```
 "#;
 

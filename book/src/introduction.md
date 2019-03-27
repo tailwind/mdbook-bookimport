@@ -47,9 +47,10 @@ appropriately.
 Here's how to use superimport to import a section of a file
 labeled `super-section`.
 
-```sh
-# Without the back slash
-\{{#superimport ../book.toml@super-section }}
+```md
+<!-- Without the / symbol -->
+
+/{{#superimport  ../book.toml@super-section }}
 ```
 
 ```toml
