@@ -13,7 +13,7 @@ jobs:
             - v1-cargo-cache-test-{{ arch }}-{{ .Branch }}
             - v1-cargo-cache-test-{{ arch }}
 
-      # Install nightly & wasm
+      # Install Rust Stable
       - run:
           name: Install Rust stable
           command: rustup update stable && rustup default stable
@@ -46,7 +46,7 @@ jobs:
             - v1-cargo-cache-docs-{{ arch }}-{{ .Branch }}
             - v1-cargo-cache-docs-{{ arch }}
 
-      # Install nightly
+      # Install Rust Stable
       - run:
           name: Install Rust nightly
           command: rustup update stable && rustup default stable
