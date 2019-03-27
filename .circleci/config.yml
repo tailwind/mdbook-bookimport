@@ -48,7 +48,7 @@ jobs:
 
       # Install Rust Stable
       - run:
-          name: Install Rust nightly
+          name: Install Rust stable
           command: rustup update stable && rustup default stable
 
       # Show versions
