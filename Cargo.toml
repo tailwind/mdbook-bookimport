@@ -2,6 +2,9 @@
 name = "mdbook-superimport"
 version = "0.1.0"
 authors = ["The Tailwind Developers <frankie@tailwindapp.com>"]
+description = "Import code/text from other files into your mdbook - without the link rot."
+keywords = ["mdbook", "include", "import", "code", "embed"]
+license = "MIT/Apache-2.0"
 edition = "2018"
 
 [dependencies]
