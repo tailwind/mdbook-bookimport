@@ -1,3 +1,5 @@
+#![deny(missing_docs, warnings)]
+
 #[macro_use]
 extern crate log;
 

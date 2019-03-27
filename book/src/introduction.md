@@ -52,10 +52,15 @@ labeled `super-section`.
 \{{#superimport ../book.toml@super-section }}
 ```
 
-```css
+```toml
+# Contents of book.toml
+
+# ...
 
 # @superimport start super-section
 src = "src"
 title = "The Mdbook Superimport Book"
 # @superimport end super-section
+
+# ...
 ```

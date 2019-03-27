@@ -1,3 +1,5 @@
+#![deny(missing_docs, warnings)]
+
 use failure::Fail;
 use lazy_static::lazy_static;
 use log::*;
@@ -15,6 +17,8 @@ impl Preprocessor for Superimport {
         "mdbook-superimport"
     }
 
+    /// Given a book (usually from stdin) process all of the chapters and replace
+    /// any #superimport's with the content that you're importing.
     fn run(
         &self,
         ctx: &PreprocessorContext,
@@ -25,18 +29,26 @@ impl Preprocessor for Superimport {
         let book_src_dir = ctx.root.join(&ctx.config.book.src);
 
         for section in book.sections.iter_mut() {
-            process_chapter(section, &book_src_dir);
+            process_chapter(section, &book_src_dir)?;
         }
 
         Ok(book)
     }
 }
 
+/// Process a chapter in an mdbook.
+///
+/// Namely - replace all #superimport calls with the content that it was trying to import.
+///
+/// If the chapter has subchapters they will also be processed recursively.
 fn process_chapter(book_item: &mut BookItem, book_src_dir: &PathBuf) -> mdbook::errors::Result<()> {
-    // FIXME: Make process_chapter method take the BookItem
     if let BookItem::Chapter(ref mut chapter) = book_item {
         debug!("Processing chapter {}", chapter.name);
 
+        // The full path within the filesystem to the directory that holds the mdbook's
+        // SUMMARY.md file
+        //
+        // /path/to/.../my-mdbook
         let chapter_dir = chapter
             .path
             .parent()
@@ -45,7 +57,7 @@ fn process_chapter(book_item: &mut BookItem, book_src_dir: &PathBuf) -> mdbook::
 
         let mut content = chapter.content.clone();
 
-        let simports = SuperImport::parse_chapter(chapter);
+        let simports = SuperImport::find_unescaped_superimports(chapter);
 
         // Iterate backwards through the simports so that we start by replacing the imports
         // that are lower in the file first.
@@ -53,19 +65,19 @@ fn process_chapter(book_item: &mut BookItem, book_src_dir: &PathBuf) -> mdbook::
         // This ensures that as we replace simports we aren't throwing off the start and end
         // indices of other simports.
         for simport in simports.iter().rev() {
-            // TODO: BREADCRUMB If the full_simport_text begins with a `\` just continue.
-            // Write a test case for this by importing from our test-cases directory
-
             let new_content = match simport.read_content_between_tags(&chapter_dir) {
                 Ok(new_content) => new_content,
-                Err(err) => panic!("{:#?}", err), // FIXME: Return failure with `?`
+                Err(err) => panic!("{:#?}", err),
             };
 
+            // Replace the #superimport in the chapter with the contents that we were
+            // trying to impor.
             content = content.replace(simport.full_simport_text, &new_content);
         }
 
         chapter.content = content;
 
+        // Process all of the chapters within this chapter
         for sub_item in chapter.sub_items.iter_mut() {
             process_chapter(sub_item, book_src_dir)?;
         }
@@ -119,8 +131,14 @@ struct SuperImport<'a> {
 
 // Wrapping in lazy_static ensures that our regex is only compiled once
 lazy_static! {
-  /// The regex that finds superimports such as -> `{{ #superimport some-file.txt@some-tag }}`
-  static ref RE: Regex = Regex::new(
+  /// The regex that finds superimports such as
+  ///  -> `{{ #superimport some-file.txt@some-tag }}`
+  ///
+  /// It will also find escaped superimports such as
+  ///  -> `\{{ #superimport some-file.txt@some-tag }}`
+  ///
+  /// We parse both escaped and unescaped so that we can later completely ignore the escaped ones.
+  static ref SUPERIMPORT_REGEX: Regex = Regex::new(
   r"(?x)                        # (?x) means insignificant whitespace mode
                                 # allows us to put comments and space things out.
 
@@ -141,10 +159,11 @@ lazy_static! {
 }
 
 impl<'a> SuperImport<'a> {
-    fn parse_chapter(chapter: &Chapter) -> Vec<SuperImport> {
+    /// Parse a chapter within an mdbook for superimport's and return them
+    fn find_unescaped_superimports(chapter: &Chapter) -> Vec<SuperImport> {
         let mut simports = vec![];
 
-        let matches = RE.captures_iter(chapter.content.as_str());
+        let matches = SUPERIMPORT_REGEX.captures_iter(chapter.content.as_str());
 
         for capture_match in matches {
             // {{#superimport ./fixture.css@cool-css }}
@@ -183,6 +202,7 @@ impl<'a> SuperImport<'a> {
 #[derive(Debug, Fail, PartialEq)]
 enum TagError {
     #[fail(display = "Could not find `@superimport start {}`", tag)]
+    #[allow(unused)] // TODO: -> Use this
     MissingStartTag { tag: String },
 }
 
@@ -193,8 +213,6 @@ impl<'a> SuperImport<'a> {
             r#"Reading content in chapter "{}" for superimport "{:#?}" "#,
             self.host_chapter.name, self.full_simport_text
         );
-
-        let tag = self.tag;
 
         let path = Path::join(&chapter_dir, &self.file);
 
@@ -221,8 +239,8 @@ impl<'a> SuperImport<'a> {
         let content_between_tags: Vec<String> = content
             .lines()
             .enumerate()
-            .filter(|(line_num, line_content)| *line_num > start_line && *line_num < end_line)
-            .map(|(line_num, line_content)| line_content.to_string())
+            .filter(|(line_num, _line_content)| *line_num > start_line && *line_num < end_line)
+            .map(|(_line_num, line_content)| line_content.to_string())
             .collect();
         let content_between_tags = content_between_tags.join("\n");
 
@@ -238,7 +256,7 @@ mod tests {
     fn parse_simports_from_chapter() {
         let tag_import_chapter = make_tag_import_chapter();
 
-        let simports = SuperImport::parse_chapter(&tag_import_chapter);
+        let simports = SuperImport::find_unescaped_superimports(&tag_import_chapter);
 
         let expected_simports = vec![SuperImport {
             host_chapter: &tag_import_chapter,
@@ -256,7 +274,7 @@ mod tests {
     fn content_between_tags() {
         let tag_import_chapter = make_tag_import_chapter();
 
-        let simport = &SuperImport::parse_chapter(&tag_import_chapter)[0];
+        let simport = &SuperImport::find_unescaped_superimports(&tag_import_chapter)[0];
 
         let chapter_dir = "book/src/test-cases/tag-import";
         let chapter_dir = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), chapter_dir);
@@ -272,10 +290,10 @@ mod tests {
 
     #[test]
     fn replace_chapter() {
-        let mut tag_import_chapter = make_tag_import_chapter();
+        let tag_import_chapter = make_tag_import_chapter();
         let mut item = BookItem::Chapter(tag_import_chapter);
 
-        process_chapter(&mut item, &"".into());
+        process_chapter(&mut item, &"".into()).unwrap();
 
         let expected_content = r#"# Tag Import
 
@@ -295,19 +313,18 @@ mod tests {
 
     #[test]
     fn replace_escaped_simport() {
-        let mut escaped_import_chapter = make_escaped_import_chapter();
+        let escaped_import_chapter = make_escaped_import_chapter();
 
-        let expected_content = escaped_import_chapter.content.clone();
-        let expected_content = r#"# Escaped Sinclude
+        let expected_content = r#"# Escaped Superimport
 
 ```
-\{{#sinclude ./ignored.txt@foo-bar}}
+\{{#superimport ./ignored.txt@foo-bar}}
 ```
 "#;
 
         let mut item = BookItem::Chapter(escaped_import_chapter);
 
-        process_chapter(&mut item, &"".into());
+        process_chapter(&mut item, &"".into()).unwrap();
 
         match item {
             BookItem::Chapter(escaped_chapter) => {

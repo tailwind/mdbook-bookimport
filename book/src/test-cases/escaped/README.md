@@ -1,5 +1,5 @@
-# Escaped Sinclude
+# Escaped Superimport
 
 ```
-\{{#sinclude ./ignored.txt@foo-bar}}
+\{{#superimport ./ignored.txt@foo-bar}}
 ```
