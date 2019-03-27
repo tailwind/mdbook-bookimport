@@ -227,8 +227,8 @@ impl<'a> SuperImport<'a> {
         // @superimport start foo <--- this line is not captured
         // ... match all of these
         // ... lines between the
-        // ... start and end tags <--- this line is not captured
-        // @superimport end foo
+        // ... start and end tags
+        // @superimport end foo   <--- this line is not captured
         let start_regex = Regex::new(&format!(
             r"(?x)         # Insignificant whitespace mode (allows for comments)
 @superimport
