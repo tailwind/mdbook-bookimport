@@ -30,9 +30,9 @@ cargo install mdbook-superimport
 ```md
 <!-- In your markdown files -->
 
-``\`
+``````
 {{#superimport ../path/to/file.foo@some-tag-name-here}}
-``\`
+``````
 ```
 
 ```rust
