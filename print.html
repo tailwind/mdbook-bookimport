@@ -166,8 +166,9 @@ appropriately.</p>
 <hr />
 <p>Here's how to use superimport to import a section of a file
 labeled <code>super-section</code>.</p>
-<pre><code class="language-sh"># Without the back slash
+<pre><code class="language-md">&lt;!-- Without the / symbol --&gt;
 
+/{{#superimport  ../book.toml@super-section }}
 </code></pre>
 <pre><code class="language-toml"># Contents of book.toml
 
@@ -189,7 +190,7 @@ will use to verify that Superimport works as expected.</p>
 <pre><code class="language-md">{{#superimport ./fixture.css@cool-css }}
 </code></pre>
 <a class="header" href="print.html#escaped-superimport" id="escaped-superimport"><h1>Escaped Superimport</h1></a>
-<pre><code>
+<pre><code>/{{#superimport ./ignored.txt@foo-bar}}
 </code></pre>
 
                     </main>
