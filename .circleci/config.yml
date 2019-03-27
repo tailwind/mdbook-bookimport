@@ -21,7 +21,7 @@ jobs:
       # Show versions
       - run:
           name: Show versions
-          command: rustc --version && cargo --version && wasm-pack --version && firefox/firefox --version
+          command: rustc --version && cargo --version
 
       # Run tests
       - run:
