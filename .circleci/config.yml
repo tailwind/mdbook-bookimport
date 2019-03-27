@@ -1,0 +1,121 @@
+version: 2
+
+jobs:
+
+  test:
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-cargo-cache-test-{{ arch }}-{{ .Branch }}
+            - v1-cargo-cache-test-{{ arch }}
+
+      # Install Rust Stable
+      - run:
+          name: Install Rust stable
+          command: rustup update stable && rustup default stable
+
+      # Show versions
+      - run:
+          name: Show versions
+          command: rustc --version && cargo --version
+
+      # Run tests
+      - run:
+          name: Run all tests
+          command: ./test.sh
+
+      # Save cache
+      - save_cache:
+          key: v1-cargo-cache-test-{{ arch }}-{{ .Branch }}
+          paths:
+            - target
+            - /usr/local/cargo
+
+  docs-build:
+    docker:
+      - image: rust:latest
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - v1-cargo-cache-docs-{{ arch }}-{{ .Branch }}
+            - v1-cargo-cache-docs-{{ arch }}
+
+      # Install Rust Stable
+      - run:
+          name: Install Rust nightly
+          command: rustup update stable && rustup default stable
+
+      # Show versions
+      - run:
+          name: Show versions
+          command: rustc --version && cargo --version
+
+      # Install mdbook
+      - run:
+          name: Install mdbook
+          command: >
+            (test -x $CARGO_HOME/bin/cargo-install-update || cargo install cargo-update)
+            && (test -x $CARGO_HOME/bin/mdbook || cargo install --vers "^0.2" mdbook)
+            && mv ~/.gitconfig ~/.gitconfig.disabled  # Workaround for https://github.com/nabijaczleweli/cargo-update/issues/100
+            && cargo install-update -a
+            && mv ~/.gitconfig.disabled ~/.gitconfig
+
+      # Build docs
+      - run:
+          name: Build docs
+          command: >
+            (cd book && mdbook build)
+            && cargo doc --no-deps -p mdbook-superimport
+            && cp -R target/doc book/book/api
+      - persist_to_workspace:
+          root: book
+          paths: book
+
+      # Save cache
+      - save_cache:
+          key: v1-cargo-cache-docs-{{ arch }}-{{ .Branch }}
+          paths:
+            - target
+            - /usr/local/cargo
+
+  docs-deploy:
+    docker:
+      - image: node:10
+    steps:
+      - checkout
+      - attach_workspace:
+          at: book
+      - run:
+          name: Disable jekyll builds
+          command: touch book/book/.nojekyll
+      - run:
+          name: Install and configure dependencies
+          command: >
+            npm install -g gh-pages@2
+            && git config user.email "ci-build@circleci"
+            && git config user.name "ci-build"
+      - add_ssh_keys:
+          fingerprints:
+            - "e6:88:2d:b4:4d:bc:48:2c:25:42:c7:0c:73:0b:2e:b1"
+      - run:
+          name: Deploy docs to gh-pages branch
+          command: gh-pages --dotfiles --message "[skip ci] Updates" --dist book/book
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - test
+      - docs-build
+      - docs-deploy:
+          requires:
+            - docs-build
+          filters:
+            branches:
+              only: master
