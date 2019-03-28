@@ -1,4 +1,4 @@
-//! mdbook-superimport is a pre-processor for [mdbook]'s that helps you avoid link rot
+//! mdbook-bookimport is a pre-processor for [mdbook]'s that helps you avoid link rot
 //! when importing parts of other files into your mdbook.
 //!
 //! [mdbook]: https://github.com/rust-lang-nursery/mdBook
@@ -18,22 +18,22 @@ use std::path::{Path, PathBuf};
 // Probably because it also uses "\" to escape it's imports
 static _ESCAPE_CHAR: &'static str = "/";
 
-/// The pre-processor that powers the mdbook-superimport plugin
-pub struct Superimport;
+/// The pre-processor that powers the mdbook-bookimport plugin
+pub struct Bookimport;
 
-impl Preprocessor for Superimport {
+impl Preprocessor for Bookimport {
     fn name(&self) -> &str {
-        "mdbook-superimport"
+        "mdbook-bookimport"
     }
 
     /// Given a book (usually from stdin) process all of the chapters and replace
-    /// any #superimport's with the content that you're importing.
+    /// any #bookimport's with the content that you're importing.
     fn run(
         &self,
         ctx: &PreprocessorContext,
         mut book: Book,
     ) -> Result<Book, mdbook::errors::Error> {
-        debug!("Running `run` method in superimport Preprocessor trait impl");
+        debug!("Running `run` method in bookimport Preprocessor trait impl");
 
         let book_src_dir = ctx.root.join(&ctx.config.book.src);
 
@@ -47,7 +47,7 @@ impl Preprocessor for Superimport {
 
 /// Process a chapter in an mdbook.
 ///
-/// Namely - replace all #superimport calls with the content that it was trying to import.
+/// Namely - replace all #bookimport calls with the content that it was trying to import.
 ///
 /// If the chapter has subchapters they will also be processed recursively.
 fn process_chapter(book_item: &mut BookItem, book_src_dir: &PathBuf) -> mdbook::errors::Result<()> {
@@ -66,7 +66,7 @@ fn process_chapter(book_item: &mut BookItem, book_src_dir: &PathBuf) -> mdbook::
 
         let mut content = chapter.content.clone();
 
-        let simports = SuperImport::find_unescaped_superimports(chapter);
+        let simports = BookImport::find_unescaped_bookimports(chapter);
 
         // Iterate backwards through the simports so that we start by replacing the imports
         // that are lower in the file first.
@@ -76,10 +76,10 @@ fn process_chapter(book_item: &mut BookItem, book_src_dir: &PathBuf) -> mdbook::
         for simport in simports.iter().rev() {
             let new_content = match simport.read_content_between_tags(&chapter_dir) {
                 Ok(new_content) => new_content,
-                Err(err) => panic!("Error reading content for superimport: {:#?}", err),
+                Err(err) => panic!("Error reading content for bookimport: {:#?}", err),
             };
 
-            // Replace the #superimport in the chapter with the contents that we were
+            // Replace the #bookimport in the chapter with the contents that we were
             // trying to impor.
             content = content.replace(simport.full_simport_text, &new_content);
         }
@@ -97,25 +97,25 @@ fn process_chapter(book_item: &mut BookItem, book_src_dir: &PathBuf) -> mdbook::
 
 /// # Example
 ///
-/// If you look at book/src/introduction.md you'll see this super import:
+/// If you look at book/src/introduction.md you'll see this book import:
 ///
 /// ```md,ignore
-/// {{#superimport ../book.toml@super-section }}
+/// {{#bookimport ../book.toml@book-section }}
 /// ```
 ///
 /// Which refers to this part of our book/book.toml
 ///
 /// ```toml,ignore
-/// # @superimport start super-section
-/// [preprocessor.superimport]
+/// # @book start book-section
+/// [preprocessor.bookimport]
 /// // ...
-/// # @superimport end super-section
+/// # @book end book-section
 /// ```
 ///
-/// The doc comments on the struct fields refer to this superimport
+/// The doc comments on the struct fields refer to this bookimport
 #[derive(Debug, PartialEq)]
-struct SuperImport<'a> {
-    /// The book chapter that this #superimport was found in
+struct BookImport<'a> {
+    /// The book chapter that this #bookimport was found in
     ///
     /// introduction.md
     host_chapter: &'a Chapter,
@@ -123,41 +123,41 @@ struct SuperImport<'a> {
     ///
     /// ../book.toml
     file: PathBuf,
-    /// The text of this superimport in the host_chapter
+    /// The text of this bookimport in the host_chapter
     ///
-    /// {{ #superimport some-file.txt@some-tag }}
+    /// {{ #bookimport some-file.txt@some-tag }}
     full_simport_text: &'a str,
     /// Tags after the characters after an `@` symbol. When importing from a file
-    /// Superimport will pull all text before and after the `@tag`
+    /// Bookimport will pull all text before and after the `@tag`
     ///
-    /// Some(super-section)
+    /// Some(book-section)
     tag: &'a str,
-    /// Where in the chapter's bytes does this superimport start?
+    /// Where in the chapter's bytes does this bookimport start?
     start: usize,
-    /// Where in the chapter's bytes does this superimport end?
+    /// Where in the chapter's bytes does this bookimport end?
     end: usize,
 }
 
 // Wrapping in lazy_static ensures that our regex is only compiled once
 lazy_static! {
-  /// The regex that finds superimports such as
-  ///  -> `{{ #superimport some-file.txt@some-tag }}`
+  /// The regex that finds bookimports such as
+  ///  -> `{{ #bookimport some-file.txt@some-tag }}`
   ///
-  /// It will also find escaped superimports such as
-  ///  -> `\{{ #superimport some-file.txt@some-tag }}`
+  /// It will also find escaped bookimports such as
+  ///  -> `\{{ #bookimport some-file.txt@some-tag }}`
   ///
   /// We parse both escaped and unescaped so that we can later completely ignore the escaped ones.
   static ref SUPERIMPORT_REGEX: Regex = Regex::new(
   r"(?x)                        # (?x) means insignificant whitespace mode
                                 # allows us to put comments and space things out.
 
-    /\{\{\#.*\}\}                # escaped import such as `/{{ #superimport some-file.txt@some-tag }}`
+    /\{\{\#.*\}\}                # escaped import such as `/{{ #bookimport some-file.txt@some-tag }}`
 
   |                               # OR
 
-                                  # Non escaped import -> `{{ #superimport some-file.txt@some-tag }}`
+                                  # Non escaped import -> `{{ #bookimport some-file.txt@some-tag }}`
     \{\{\s*                         # opening braces and whitespace
-    \#superimport                       # #superimport
+    \#bookimport                       # #bookimport
     \s+                             # separating whitespace
     (?P<file>[a-zA-Z0-9\s_.\-/\\]+) # some-file.txt
     @                               # @ symbol that denotes the name of a tag
@@ -167,24 +167,24 @@ lazy_static! {
   ).unwrap();
 }
 
-impl<'a> SuperImport<'a> {
-    /// Parse a chapter within an mdbook for superimport's and return them
-    fn find_unescaped_superimports(chapter: &Chapter) -> Vec<SuperImport> {
+impl<'a> BookImport<'a> {
+    /// Parse a chapter within an mdbook for bookimport's and return them
+    fn find_unescaped_bookimports(chapter: &Chapter) -> Vec<BookImport> {
         let mut simports = vec![];
 
         let matches = SUPERIMPORT_REGEX.captures_iter(chapter.content.as_str());
 
         for capture_match in matches {
-            // {{#superimport ./fixture.css@cool-css }}
+            // {{#bookimport ./fixture.css@cool-css }}
             //    OR
-            // #{{#superimport ./fixture.css@cool-css }}
+            // #{{#bookimport ./fixture.css@cool-css }}
             let full_capture = capture_match.get(0).unwrap();
 
             let full_simport_text = &chapter.content[full_capture.start()..full_capture.end()];
 
             // NOTE: The backslash means that this import was escaped by the author, so
             // we don't want to replace it.
-            // /{{#superimport ./fixture.css@cool-css }}
+            // /{{#bookimport ./fixture.css@cool-css }}
             if full_simport_text.starts_with(r"/") {
                 continue;
             }
@@ -192,7 +192,7 @@ impl<'a> SuperImport<'a> {
             let file = capture_match["file"].into();
             let tag = capture_match.get(2).unwrap();
 
-            let simport = SuperImport {
+            let simport = BookImport {
                 host_chapter: chapter,
                 file,
                 full_simport_text,
@@ -211,16 +211,16 @@ impl<'a> SuperImport<'a> {
 // TODO: Create TagError variants and add better error handling.
 #[derive(Debug, Fail, PartialEq)]
 enum TagError {
-    #[fail(display = "Could not find `@superimport start {}`", tag)]
+    #[fail(display = "Could not find `@book start {}`", tag)]
     #[allow(unused)] // TODO: -> Use this
     MissingStartTag { tag: String },
 }
 
-impl<'a> SuperImport<'a> {
+impl<'a> BookImport<'a> {
     /// TODO: Return failure::Error instead if TagError
     fn read_content_between_tags(&self, chapter_dir: &PathBuf) -> Result<String, TagError> {
         debug!(
-            r#"Reading content in chapter "{}" for superimport "{:#?}" "#,
+            r#"Reading content in chapter "{}" for bookimport "{:#?}" "#,
             self.host_chapter.name, self.full_simport_text
         );
 
@@ -228,14 +228,14 @@ impl<'a> SuperImport<'a> {
 
         let content = String::from_utf8(::std::fs::read(&path).unwrap()).unwrap();
 
-        // @superimport start foo <--- this line is not captured
+        // @book start foo <--- this line is not captured
         // ... match all of these
         // ... lines between the
         // ... start and end tags
-        // @superimport end foo   <--- this line is not captured
+        // @book end foo   <--- this line is not captured
         let start_regex = Regex::new(&format!(
             r"(?x)         # Insignificant whitespace mode (allows for comments)
-@superimport
+@book
 \s+                        # Separating whitespace
 start
 \s+                        # Separating whitespace
@@ -253,7 +253,7 @@ start
 
 .*?                        # Characters between start of end import line and end import tag
 
-@superimport
+@book
 \s+                        # Separating whitespace
 end
 \s+                        # Separating whitespace
@@ -279,15 +279,15 @@ mod tests {
     fn parse_simports_from_chapter() {
         let tag_import_chapter = make_tag_import_chapter();
 
-        let simports = SuperImport::find_unescaped_superimports(&tag_import_chapter);
+        let simports = BookImport::find_unescaped_bookimports(&tag_import_chapter);
 
-        let expected_simports = vec![SuperImport {
+        let expected_simports = vec![BookImport {
             host_chapter: &tag_import_chapter,
             file: "./fixture.css".into(),
-            full_simport_text: "{{#superimport ./fixture.css@cool-css }}",
+            full_simport_text: "{{#bookimport ./fixture.css@cool-css }}",
             tag: "cool-css",
             start: 20,
-            end: 60,
+            end: 59,
         }];
 
         assert_eq!(simports, expected_simports);
@@ -297,7 +297,7 @@ mod tests {
     fn ignore_escaped_simport() {
         let escaped_import_chapter = make_escaped_import_chapter();
 
-        let simports = SuperImport::find_unescaped_superimports(&escaped_import_chapter);
+        let simports = BookImport::find_unescaped_bookimports(&escaped_import_chapter);
 
         assert_eq!(simports.len(), 0);
     }
@@ -306,7 +306,7 @@ mod tests {
     fn content_between_tags() {
         let tag_import_chapter = make_tag_import_chapter();
 
-        let simport = &SuperImport::find_unescaped_superimports(&tag_import_chapter)[0];
+        let simport = &BookImport::find_unescaped_bookimports(&tag_import_chapter)[0];
 
         let chapter_dir = "book/src/test-cases/tag-import";
         let chapter_dir = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), chapter_dir);
@@ -354,10 +354,10 @@ mod tests {
 
         // Spacing an indentation is intentional.
         // We're testing that the
-        let expected_content = r#"# Escaped Superimport
+        let expected_content = r#"# Escaped Bookimport
 
 ```
-/{{#superimport ./ignored.txt@foo-bar}}
+/{{#bookimport ./ignored.txt@foo-bar}}
 ```
 "#;
 

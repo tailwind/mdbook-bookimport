@@ -1,11 +1,11 @@
 [package]
-name = "mdbook-superimport"
+name = "mdbook-bookimport"
 version = "0.1.1"
 authors = ["The Tailwind Developers <frankie@tailwindapp.com>"]
 description = "Import code/text from other files into your mdbook - without the link rot."
 keywords = ["mdbook", "include", "import", "code", "embed"]
-documentation = "https://tailwind.github.io/mdbook-superimport/"
-repository = "https://github.com/tailwind/mdbook-superimport"
+documentation = "https://tailwind.github.io/mdbook-bookimport/"
+repository = "https://github.com/tailwind/mdbook-bookimport"
 license = "MIT/Apache-2.0"
 edition = "2018"
 

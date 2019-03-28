@@ -1,5 +1,5 @@
 # Tag Import
 
 ```md
-{{#superimport ./fixture.css@cool-css }}
+{{#bookimport ./fixture.css@cool-css }}
 ```

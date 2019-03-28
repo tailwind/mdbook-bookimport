@@ -1,4 +1,4 @@
-//! mdbook-superimport is a pre-processor for [mdbook]'s that helps you avoid link rot
+//! mdbook-bookimport is a pre-processor for [mdbook]'s that helps you avoid link rot
 //! when importing parts of other files into your mdbook.
 //!
 //! [mdbook]: https://github.com/rust-lang-nursery/mdBook
@@ -19,19 +19,19 @@ use mdbook::{
     errors::Error,
     preprocess::{CmdPreprocessor, Preprocessor},
 };
-use mdbook_superimport::Superimport;
+use mdbook_bookimport::Bookimport;
 
 fn main() {
     init_logging();
 
     let matches = make_cli().get_matches();
 
-    let superimport = Superimport {};
+    let bookimport = Bookimport {};
 
     if let Some(sub_args) = matches.subcommand_matches("supports") {
-        handle_supports(&superimport, sub_args);
+        handle_supports(&bookimport, sub_args);
     } else {
-        if let Err(e) = handle_preprocessing(&superimport) {
+        if let Err(e) = handle_preprocessing(&bookimport) {
             error!("{}", e);
             process::exit(1);
         }
@@ -40,7 +40,7 @@ fn main() {
 
 // Used by mdbook to determine whether or not our binary can be used as a pre-processor
 fn make_cli() -> App<'static, 'static> {
-    App::new("mdbook-superimport")
+    App::new("mdbook-bookimport")
         .about("Import code/text from other files into your mdbook - without the link rot.")
         .subcommand(
             SubCommand::with_name("supports")
@@ -50,9 +50,9 @@ fn make_cli() -> App<'static, 'static> {
 }
 
 // Used by mdbook to determine whether or not our binary can be used as a pre-processor
-fn handle_supports(superimport: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {
+fn handle_supports(bookimport: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {
     let renderer = sub_args.value_of("renderer").expect("Required argument");
-    let supported = superimport.supports_renderer(&renderer);
+    let supported = bookimport.supports_renderer(&renderer);
 
     // Signal whether the renderer is supported by exiting with 1 or 0.
     if supported {
@@ -62,13 +62,13 @@ fn handle_supports(superimport: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {
     }
 }
 
-// Run our preprocessor to replace #superimport's in every chapter in an mdbook
-fn handle_preprocessing(superimport: &dyn Preprocessor) -> Result<(), Error> {
+// Run our preprocessor to replace #bookimport's in every chapter in an mdbook
+fn handle_preprocessing(bookimport: &dyn Preprocessor) -> Result<(), Error> {
     let (ctx, book) = CmdPreprocessor::parse_input(::std::io::stdin())?;
 
-    let book_after_superimport = superimport.run(&ctx, book)?;
+    let book_after_bookimport = bookimport.run(&ctx, book)?;
 
-    serde_json::to_writer(::std::io::stdout(), &book_after_superimport)?;
+    serde_json::to_writer(::std::io::stdout(), &book_after_bookimport)?;
 
     Ok(())
 }

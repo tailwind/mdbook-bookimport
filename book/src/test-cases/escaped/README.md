@@ -1,5 +1,5 @@
-# Escaped Superimport
+# Escaped Bookimport
 
 ```
-/{{#superimport ./ignored.txt@foo-bar}}
+/{{#bookimport ./ignored.txt@foo-bar}}
 ```

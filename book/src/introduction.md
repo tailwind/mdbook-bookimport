@@ -8,24 +8,24 @@ higher level context.
 can be prone to link rot when you modify a file but forget to modify all of the sections
 in your guide that refer to a file.
 
- `Superimport` seeks to address this by allowing you to import sections of a file by annotating
+ `Bookimport` seeks to address this by allowing you to import sections of a file by annotating
  the file.
 
  This allows you to modify the code between the annotations as much as you like and the import will
  still behave as you originally intended.
 
-`Superimport` was originally created to close [mdbook issue #879](https://github.com/rust-lang-nursery/mdBook/issues/879).
+`Bookimport` was originally created to close [mdbook issue #879](https://github.com/rust-lang-nursery/mdBook/issues/879).
 
 ## Installation
 
 ```sh
-cargo install mdbook-superimport
+cargo install mdbook-bookimport
 ```
 
 ## In your book.toml
 
 ```md
-{{#superimport ../book.toml@super-section }}
+{{#bookimport ../book.toml@book-section }}
 ```
 
 ## Usage
@@ -33,24 +33,24 @@ cargo install mdbook-superimport
 Annotate any file with.
 
 ```rust
-// @superimport start some-tag
+// @book start some-tag
 // ... contents go here ...
-// @superimport end some-tag
+// @book end some-tag
 ```
 
-Superimport only looks for the `@superimport {start,end} some-tag`, so depending on
+Bookimport only looks for the `@book {start,end} some-tag`, so depending on
 the file type that you're in you'll want to comment thoe annotation out
 appropriately.
 
 ---
 
-Here's how to use superimport to import a section of a file
-labeled `super-section`.
+Here's how to use bookimport to import a section of a file
+labeled `book-section`.
 
 ```md
 <!-- Without the / symbol -->
 
-/{{#superimport  ../book.toml@super-section }}
+/{{#bookimport  ../book.toml@book-section }}
 ```
 
 ```toml
@@ -58,10 +58,10 @@ labeled `super-section`.
 
 # ...
 
-# @superimport start super-section
+# @book start book-section
 src = "src"
-title = "The Mdbook Superimport Book"
-# @superimport end super-section
+title = "The Mdbook Bookimport Book"
+# @book end book-section
 
 # ...
 ```

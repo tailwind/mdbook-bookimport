@@ -2,9 +2,9 @@
 authors = ["Chinedu Francis Nwafili"]
 multilingual = false
 src = "src"
-title = "The Mdbook Superimport Book"
+title = "The Mdbook Bookimport Book"
 
-# @superimport start super-section
-[preprocessor.superimport]
+# @book start book-section
+[preprocessor.bookimport]
 
-# @superimport end super-section
+# @book end book-section
