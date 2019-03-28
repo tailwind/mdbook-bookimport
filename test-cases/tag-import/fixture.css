@@ -2,10 +2,10 @@
   display: none;
 }
 
-/* @superimport start cool-css */
+/* @book start cool-css */
 
 .this-will-be-included {
   display: block;
 }
 
-/* @superimport end cool-css */
+/* @book end cool-css */

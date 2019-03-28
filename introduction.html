@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Introduction - The Mdbook Superimport Book</title>
+        <title>Introduction - The Mdbook Bookimport Book</title>
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -99,7 +99,7 @@
                             
                         </div>
 
-                        <h1 class="menu-title">The Mdbook Superimport Book</h1> 
+                        <h1 class="menu-title">The Mdbook Bookimport Book</h1> 
 
                         <div class="right-buttons">
                             <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -140,44 +140,44 @@ higher level context.</p>
 <p><code>mdbook</code> comes with a way to <code>#include</code> in between two line numbers in a file - but this
 can be prone to link rot when you modify a file but forget to modify all of the sections
 in your guide that refer to a file.</p>
-<p><code>Superimport</code> seeks to address this by allowing you to import sections of a file by annotating
+<p><code>Bookimport</code> seeks to address this by allowing you to import sections of a file by annotating
 the file.</p>
 <p>This allows you to modify the code between the annotations as much as you like and the import will
 still behave as you originally intended.</p>
-<p><code>Superimport</code> was originally created to close <a href="https://github.com/rust-lang-nursery/mdBook/issues/879">mdbook issue #879</a>.</p>
+<p><code>Bookimport</code> was originally created to close <a href="https://github.com/rust-lang-nursery/mdBook/issues/879">mdbook issue #879</a>.</p>
 <a class="header" href="introduction.html#installation" id="installation"><h2>Installation</h2></a>
-<pre><code class="language-sh">cargo install mdbook-superimport
+<pre><code class="language-sh">cargo install mdbook-bookimport
 </code></pre>
 <a class="header" href="introduction.html#in-your-booktoml" id="in-your-booktoml"><h2>In your book.toml</h2></a>
-<pre><code class="language-md">{{#superimport ../book.toml@super-section }}
+<pre><code class="language-md">{{#bookimport ../book.toml@book-section }}
 </code></pre>
 <a class="header" href="introduction.html#usage" id="usage"><h2>Usage</h2></a>
 <p>Annotate any file with.</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
-// @superimport start some-tag
+// @book start some-tag
 // ... contents go here ...
-// @superimport end some-tag
+// @book end some-tag
 #}</code></pre></pre>
-<p>Superimport only looks for the <code>@superimport {start,end} some-tag</code>, so depending on
+<p>Bookimport only looks for the <code>@book {start,end} some-tag</code>, so depending on
 the file type that you're in you'll want to comment thoe annotation out
 appropriately.</p>
 <hr />
-<p>Here's how to use superimport to import a section of a file
-labeled <code>super-section</code>.</p>
+<p>Here's how to use bookimport to import a section of a file
+labeled <code>book-section</code>.</p>
 <pre><code class="language-md">&lt;!-- Without the / symbol --&gt;
 
-/{{#superimport  ../book.toml@super-section }}
+/{{#bookimport  ../book.toml@book-section }}
 </code></pre>
 <pre><code class="language-toml"># Contents of book.toml
 
 # ...
 
-# @superimport start super-section
+# @book start book-section
 src = &quot;src&quot;
-title = &quot;The Mdbook Superimport Book&quot;
-# @superimport end super-section
+title = &quot;The Mdbook Bookimport Book&quot;
+# @book end book-section
 
 # ...
 </code></pre>

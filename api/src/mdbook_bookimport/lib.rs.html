@@ -389,8 +389,22 @@
 <span id="389">389</span>
 <span id="390">390</span>
 <span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
 </pre><div class="example-wrap"><pre class="rust ">
-<span class="doccomment">//! mdbook-superimport is a pre-processor for [mdbook]&#39;s that helps you avoid link rot</span>
+<span class="doccomment">//! mdbook-bookimport is a pre-processor for [mdbook]&#39;s that helps you avoid link rot</span>
 <span class="doccomment">//! when importing parts of other files into your mdbook.</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! [mdbook]: https://github.com/rust-lang-nursery/mdBook</span>
@@ -406,22 +420,26 @@
 <span class="kw">use</span> <span class="ident">regex</span>::<span class="ident">Regex</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">path</span>::{<span class="ident">Path</span>, <span class="ident">PathBuf</span>};
 
-<span class="doccomment">/// The pre-processor that powers the mdbook-superimport plugin</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Superimport</span>;
+<span class="comment">// Originally tried using &quot;\&quot; but ran into issues with mdbook seemingly stripping it.</span>
+<span class="comment">// Probably because it also uses &quot;\&quot; to escape it&#39;s imports</span>
+<span class="kw">static</span> <span class="ident">_ESCAPE_CHAR</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;/&quot;</span>;
 
-<span class="kw">impl</span> <span class="ident">Preprocessor</span> <span class="kw">for</span> <span class="ident">Superimport</span> {
+<span class="doccomment">/// The pre-processor that powers the mdbook-bookimport plugin</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Bookimport</span>;
+
+<span class="kw">impl</span> <span class="ident">Preprocessor</span> <span class="kw">for</span> <span class="ident">Bookimport</span> {
     <span class="kw">fn</span> <span class="ident">name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
-        <span class="string">&quot;mdbook-superimport&quot;</span>
+        <span class="string">&quot;mdbook-bookimport&quot;</span>
     }
 
     <span class="doccomment">/// Given a book (usually from stdin) process all of the chapters and replace</span>
-    <span class="doccomment">/// any #superimport&#39;s with the content that you&#39;re importing.</span>
+    <span class="doccomment">/// any #bookimport&#39;s with the content that you&#39;re importing.</span>
     <span class="kw">fn</span> <span class="ident">run</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="ident">PreprocessorContext</span>,
         <span class="kw-2">mut</span> <span class="ident">book</span>: <span class="ident">Book</span>,
     ) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Book</span>, <span class="ident">mdbook</span>::<span class="ident">errors</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Running `run` method in superimport Preprocessor trait impl&quot;</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Running `run` method in bookimport Preprocessor trait impl&quot;</span>);
 
         <span class="kw">let</span> <span class="ident">book_src_dir</span> <span class="op">=</span> <span class="ident">ctx</span>.<span class="ident">root</span>.<span class="ident">join</span>(<span class="kw-2">&amp;</span><span class="ident">ctx</span>.<span class="ident">config</span>.<span class="ident">book</span>.<span class="ident">src</span>);
 
@@ -435,7 +453,7 @@
 
 <span class="doccomment">/// Process a chapter in an mdbook.</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// Namely - replace all #superimport calls with the content that it was trying to import.</span>
+<span class="doccomment">/// Namely - replace all #bookimport calls with the content that it was trying to import.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// If the chapter has subchapters they will also be processed recursively.</span>
 <span class="kw">fn</span> <span class="ident">process_chapter</span>(<span class="ident">book_item</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BookItem</span>, <span class="ident">book_src_dir</span>: <span class="kw-2">&amp;</span><span class="ident">PathBuf</span>) <span class="op">-&gt;</span> <span class="ident">mdbook</span>::<span class="ident">errors</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
@@ -454,7 +472,7 @@
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">content</span> <span class="op">=</span> <span class="ident">chapter</span>.<span class="ident">content</span>.<span class="ident">clone</span>();
 
-        <span class="kw">let</span> <span class="ident">simports</span> <span class="op">=</span> <span class="ident">SuperImport</span>::<span class="ident">find_unescaped_superimports</span>(<span class="ident">chapter</span>);
+        <span class="kw">let</span> <span class="ident">simports</span> <span class="op">=</span> <span class="ident">BookImport</span>::<span class="ident">find_unescaped_bookimports</span>(<span class="ident">chapter</span>);
 
         <span class="comment">// Iterate backwards through the simports so that we start by replacing the imports</span>
         <span class="comment">// that are lower in the file first.</span>
@@ -464,10 +482,10 @@
         <span class="kw">for</span> <span class="ident">simport</span> <span class="kw">in</span> <span class="ident">simports</span>.<span class="ident">iter</span>().<span class="ident">rev</span>() {
             <span class="kw">let</span> <span class="ident">new_content</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">simport</span>.<span class="ident">read_content_between_tags</span>(<span class="kw-2">&amp;</span><span class="ident">chapter_dir</span>) {
                 <span class="prelude-val">Ok</span>(<span class="ident">new_content</span>) <span class="op">=&gt;</span> <span class="ident">new_content</span>,
-                <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Error reading content for superimport: {:#?}&quot;</span>, <span class="ident">err</span>),
+                <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Error reading content for bookimport: {:#?}&quot;</span>, <span class="ident">err</span>),
             };
 
-            <span class="comment">// Replace the #superimport in the chapter with the contents that we were</span>
+            <span class="comment">// Replace the #bookimport in the chapter with the contents that we were</span>
             <span class="comment">// trying to impor.</span>
             <span class="ident">content</span> <span class="op">=</span> <span class="ident">content</span>.<span class="ident">replace</span>(<span class="ident">simport</span>.<span class="ident">full_simport_text</span>, <span class="kw-2">&amp;</span><span class="ident">new_content</span>);
         }
@@ -485,25 +503,25 @@
 
 <span class="doccomment">/// # Example</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// If you look at book/src/introduction.md you&#39;ll see this super import:</span>
+<span class="doccomment">/// If you look at book/src/introduction.md you&#39;ll see this book import:</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```md,ignore</span>
-<span class="doccomment">/// {{#superimport ../book.toml@super-section }}</span>
+<span class="doccomment">/// {{#bookimport ../book.toml@book-section }}</span>
 <span class="doccomment">/// ```</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Which refers to this part of our book/book.toml</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// ```toml,ignore</span>
-<span class="doccomment">/// # @superimport start super-section</span>
-<span class="doccomment">/// [preprocessor.superimport]</span>
+<span class="doccomment">/// # @book start book-section</span>
+<span class="doccomment">/// [preprocessor.bookimport]</span>
 <span class="doccomment">/// // ...</span>
-<span class="doccomment">/// # @superimport end super-section</span>
+<span class="doccomment">/// # @book end book-section</span>
 <span class="doccomment">/// ```</span>
 <span class="doccomment">///</span>
-<span class="doccomment">/// The doc comments on the struct fields refer to this superimport</span>
+<span class="doccomment">/// The doc comments on the struct fields refer to this bookimport</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
-<span class="kw">struct</span> <span class="ident">SuperImport</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The book chapter that this #superimport was found in</span>
+<span class="kw">struct</span> <span class="ident">BookImport</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// The book chapter that this #bookimport was found in</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// introduction.md</span>
     <span class="ident">host_chapter</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Chapter</span>,
@@ -511,41 +529,41 @@
     <span class="doccomment">///</span>
     <span class="doccomment">/// ../book.toml</span>
     <span class="ident">file</span>: <span class="ident">PathBuf</span>,
-    <span class="doccomment">/// The text of this superimport in the host_chapter</span>
+    <span class="doccomment">/// The text of this bookimport in the host_chapter</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// {{ #superimport some-file.txt@some-tag }}</span>
+    <span class="doccomment">/// {{ #bookimport some-file.txt@some-tag }}</span>
     <span class="ident">full_simport_text</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>,
     <span class="doccomment">/// Tags after the characters after an `@` symbol. When importing from a file</span>
-    <span class="doccomment">/// Superimport will pull all text before and after the `@tag`</span>
+    <span class="doccomment">/// Bookimport will pull all text before and after the `@tag`</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// Some(super-section)</span>
+    <span class="doccomment">/// Some(book-section)</span>
     <span class="ident">tag</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">str</span>,
-    <span class="doccomment">/// Where in the chapter&#39;s bytes does this superimport start?</span>
+    <span class="doccomment">/// Where in the chapter&#39;s bytes does this bookimport start?</span>
     <span class="ident">start</span>: <span class="ident">usize</span>,
-    <span class="doccomment">/// Where in the chapter&#39;s bytes does this superimport end?</span>
+    <span class="doccomment">/// Where in the chapter&#39;s bytes does this bookimport end?</span>
     <span class="ident">end</span>: <span class="ident">usize</span>,
 }
 
 <span class="comment">// Wrapping in lazy_static ensures that our regex is only compiled once</span>
 <span class="macro">lazy_static</span><span class="macro">!</span> {
-  <span class="doccomment">/// The regex that finds superimports such as</span>
-  <span class="doccomment">///  -&gt; `{{ #superimport some-file.txt@some-tag }}`</span>
+  <span class="doccomment">/// The regex that finds bookimports such as</span>
+  <span class="doccomment">///  -&gt; `{{ #bookimport some-file.txt@some-tag }}`</span>
   <span class="doccomment">///</span>
-  <span class="doccomment">/// It will also find escaped superimports such as</span>
-  <span class="doccomment">///  -&gt; `\{{ #superimport some-file.txt@some-tag }}`</span>
+  <span class="doccomment">/// It will also find escaped bookimports such as</span>
+  <span class="doccomment">///  -&gt; `\{{ #bookimport some-file.txt@some-tag }}`</span>
   <span class="doccomment">///</span>
   <span class="doccomment">/// We parse both escaped and unescaped so that we can later completely ignore the escaped ones.</span>
   <span class="kw">static</span> <span class="kw-2">ref</span> <span class="ident">SUPERIMPORT_REGEX</span>: <span class="ident">Regex</span> <span class="op">=</span> <span class="ident">Regex</span>::<span class="ident">new</span>(
   <span class="string">r&quot;(?x)                        # (?x) means insignificant whitespace mode
                                 # allows us to put comments and space things out.
 
-    \\\{\{\#.*\}\}                # escaped import such as `\{{ #superimport some-file.txt@some-tag }}`
+    /\{\{\#.*\}\}                # escaped import such as `/{{ #bookimport some-file.txt@some-tag }}`
 
   |                               # OR
 
-                                  # Non escaped import -&gt; `{{ #superimport some-file.txt@some-tag }}`
+                                  # Non escaped import -&gt; `{{ #bookimport some-file.txt@some-tag }}`
     \{\{\s*                         # opening braces and whitespace
-    \#superimport                       # #superimport
+    \#bookimport                       # #bookimport
     \s+                             # separating whitespace
     (?P&lt;file&gt;[a-zA-Z0-9\s_.\-/\\]+) # some-file.txt
     @                               # @ symbol that denotes the name of a tag
@@ -555,32 +573,32 @@
   ).<span class="ident">unwrap</span>();
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">SuperImport</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Parse a chapter within an mdbook for superimport&#39;s and return them</span>
-    <span class="kw">fn</span> <span class="ident">find_unescaped_superimports</span>(<span class="ident">chapter</span>: <span class="kw-2">&amp;</span><span class="ident">Chapter</span>) <span class="op">-&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SuperImport</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">BookImport</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+    <span class="doccomment">/// Parse a chapter within an mdbook for bookimport&#39;s and return them</span>
+    <span class="kw">fn</span> <span class="ident">find_unescaped_bookimports</span>(<span class="ident">chapter</span>: <span class="kw-2">&amp;</span><span class="ident">Chapter</span>) <span class="op">-&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">BookImport</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">simports</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
 
         <span class="kw">let</span> <span class="ident">matches</span> <span class="op">=</span> <span class="ident">SUPERIMPORT_REGEX</span>.<span class="ident">captures_iter</span>(<span class="ident">chapter</span>.<span class="ident">content</span>.<span class="ident">as_str</span>());
 
         <span class="kw">for</span> <span class="ident">capture_match</span> <span class="kw">in</span> <span class="ident">matches</span> {
-            <span class="comment">// {{#superimport ./fixture.css@cool-css }}</span>
+            <span class="comment">// {{#bookimport ./fixture.css@cool-css }}</span>
             <span class="comment">//    OR</span>
-            <span class="comment">// \{{#superimport ./fixture.css@cool-css }}</span>
+            <span class="comment">// #{{#bookimport ./fixture.css@cool-css }}</span>
             <span class="kw">let</span> <span class="ident">full_capture</span> <span class="op">=</span> <span class="ident">capture_match</span>.<span class="ident">get</span>(<span class="number">0</span>).<span class="ident">unwrap</span>();
 
             <span class="kw">let</span> <span class="ident">full_simport_text</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">chapter</span>.<span class="ident">content</span>[<span class="ident">full_capture</span>.<span class="ident">start</span>()..<span class="ident">full_capture</span>.<span class="ident">end</span>()];
 
             <span class="comment">// NOTE: The backslash means that this import was escaped by the author, so</span>
             <span class="comment">// we don&#39;t want to replace it.</span>
-            <span class="comment">// \{{#superimport ./fixture.css@cool-css }}</span>
-            <span class="kw">if</span> <span class="ident">full_simport_text</span>.<span class="ident">starts_with</span>(<span class="string">r&quot;\&quot;</span>) {
+            <span class="comment">// /{{#bookimport ./fixture.css@cool-css }}</span>
+            <span class="kw">if</span> <span class="ident">full_simport_text</span>.<span class="ident">starts_with</span>(<span class="string">r&quot;/&quot;</span>) {
                 <span class="kw">continue</span>;
             }
 
             <span class="kw">let</span> <span class="ident">file</span> <span class="op">=</span> <span class="ident">capture_match</span>[<span class="string">&quot;file&quot;</span>].<span class="ident">into</span>();
             <span class="kw">let</span> <span class="ident">tag</span> <span class="op">=</span> <span class="ident">capture_match</span>.<span class="ident">get</span>(<span class="number">2</span>).<span class="ident">unwrap</span>();
 
-            <span class="kw">let</span> <span class="ident">simport</span> <span class="op">=</span> <span class="ident">SuperImport</span> {
+            <span class="kw">let</span> <span class="ident">simport</span> <span class="op">=</span> <span class="ident">BookImport</span> {
                 <span class="ident">host_chapter</span>: <span class="ident">chapter</span>,
                 <span class="ident">file</span>,
                 <span class="ident">full_simport_text</span>,
@@ -599,16 +617,16 @@
 <span class="comment">// TODO: Create TagError variants and add better error handling.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Fail</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">enum</span> <span class="ident">TagError</span> {
-    <span class="attribute">#[<span class="ident">fail</span>(<span class="ident">display</span> <span class="op">=</span> <span class="string">&quot;Could not find `@superimport start {}`&quot;</span>, <span class="ident">tag</span>)]</span>
+    <span class="attribute">#[<span class="ident">fail</span>(<span class="ident">display</span> <span class="op">=</span> <span class="string">&quot;Could not find `@book start {}`&quot;</span>, <span class="ident">tag</span>)]</span>
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused</span>)]</span> <span class="comment">// TODO: -&gt; Use this</span>
     <span class="ident">MissingStartTag</span> { <span class="ident">tag</span>: <span class="ident">String</span> },
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">SuperImport</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">BookImport</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="doccomment">/// TODO: Return failure::Error instead if TagError</span>
     <span class="kw">fn</span> <span class="ident">read_content_between_tags</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">chapter_dir</span>: <span class="kw-2">&amp;</span><span class="ident">PathBuf</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">TagError</span><span class="op">&gt;</span> {
         <span class="macro">debug</span><span class="macro">!</span>(
-            <span class="string">r#&quot;Reading content in chapter &quot;{}&quot; for superimport &quot;{:#?}&quot; &quot;#</span>,
+            <span class="string">r#&quot;Reading content in chapter &quot;{}&quot; for bookimport &quot;{:#?}&quot; &quot;#</span>,
             <span class="self">self</span>.<span class="ident">host_chapter</span>.<span class="ident">name</span>, <span class="self">self</span>.<span class="ident">full_simport_text</span>
         );
 
@@ -616,14 +634,14 @@
 
         <span class="kw">let</span> <span class="ident">content</span> <span class="op">=</span> <span class="ident">String</span>::<span class="ident">from_utf8</span>(::<span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">read</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>).<span class="ident">unwrap</span>()).<span class="ident">unwrap</span>();
 
-        <span class="comment">// @superimport start foo &lt;--- this line is not captured</span>
+        <span class="comment">// @book start foo &lt;--- this line is not captured</span>
         <span class="comment">// ... match all of these</span>
         <span class="comment">// ... lines between the</span>
         <span class="comment">// ... start and end tags</span>
-        <span class="comment">// @superimport end foo   &lt;--- this line is not captured</span>
+        <span class="comment">// @book end foo   &lt;--- this line is not captured</span>
         <span class="kw">let</span> <span class="ident">start_regex</span> <span class="op">=</span> <span class="ident">Regex</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(
             <span class="string">r&quot;(?x)         # Insignificant whitespace mode (allows for comments)
-@superimport
+@book
 \s+                        # Separating whitespace
 start
 \s+                        # Separating whitespace
@@ -641,7 +659,7 @@ start
 
 .*?                        # Characters between start of end import line and end import tag
 
-@superimport
+@book
 \s+                        # Separating whitespace
 end
 \s+                        # Separating whitespace
@@ -667,25 +685,34 @@ end
     <span class="kw">fn</span> <span class="ident">parse_simports_from_chapter</span>() {
         <span class="kw">let</span> <span class="ident">tag_import_chapter</span> <span class="op">=</span> <span class="ident">make_tag_import_chapter</span>();
 
-        <span class="kw">let</span> <span class="ident">simports</span> <span class="op">=</span> <span class="ident">SuperImport</span>::<span class="ident">find_unescaped_superimports</span>(<span class="kw-2">&amp;</span><span class="ident">tag_import_chapter</span>);
+        <span class="kw">let</span> <span class="ident">simports</span> <span class="op">=</span> <span class="ident">BookImport</span>::<span class="ident">find_unescaped_bookimports</span>(<span class="kw-2">&amp;</span><span class="ident">tag_import_chapter</span>);
 
-        <span class="kw">let</span> <span class="ident">expected_simports</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">SuperImport</span> {
+        <span class="kw">let</span> <span class="ident">expected_simports</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">BookImport</span> {
             <span class="ident">host_chapter</span>: <span class="kw-2">&amp;</span><span class="ident">tag_import_chapter</span>,
             <span class="ident">file</span>: <span class="string">&quot;./fixture.css&quot;</span>.<span class="ident">into</span>(),
-            <span class="ident">full_simport_text</span>: <span class="string">&quot;{{#superimport ./fixture.css@cool-css }}&quot;</span>,
+            <span class="ident">full_simport_text</span>: <span class="string">&quot;{{#bookimport ./fixture.css@cool-css }}&quot;</span>,
             <span class="ident">tag</span>: <span class="string">&quot;cool-css&quot;</span>,
             <span class="ident">start</span>: <span class="number">20</span>,
-            <span class="ident">end</span>: <span class="number">60</span>,
+            <span class="ident">end</span>: <span class="number">59</span>,
         }];
 
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">simports</span>, <span class="ident">expected_simports</span>);
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">ignore_escaped_simport</span>() {
+        <span class="kw">let</span> <span class="ident">escaped_import_chapter</span> <span class="op">=</span> <span class="ident">make_escaped_import_chapter</span>();
+
+        <span class="kw">let</span> <span class="ident">simports</span> <span class="op">=</span> <span class="ident">BookImport</span>::<span class="ident">find_unescaped_bookimports</span>(<span class="kw-2">&amp;</span><span class="ident">escaped_import_chapter</span>);
+
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">simports</span>.<span class="ident">len</span>(), <span class="number">0</span>);
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">content_between_tags</span>() {
         <span class="kw">let</span> <span class="ident">tag_import_chapter</span> <span class="op">=</span> <span class="ident">make_tag_import_chapter</span>();
 
-        <span class="kw">let</span> <span class="ident">simport</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">SuperImport</span>::<span class="ident">find_unescaped_superimports</span>(<span class="kw-2">&amp;</span><span class="ident">tag_import_chapter</span>)[<span class="number">0</span>];
+        <span class="kw">let</span> <span class="ident">simport</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">BookImport</span>::<span class="ident">find_unescaped_bookimports</span>(<span class="kw-2">&amp;</span><span class="ident">tag_import_chapter</span>)[<span class="number">0</span>];
 
         <span class="kw">let</span> <span class="ident">chapter_dir</span> <span class="op">=</span> <span class="string">&quot;book/src/test-cases/tag-import&quot;</span>;
         <span class="kw">let</span> <span class="ident">chapter_dir</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/{}&quot;</span>, <span class="macro">env</span><span class="macro">!</span>(<span class="string">&quot;CARGO_MANIFEST_DIR&quot;</span>), <span class="ident">chapter_dir</span>);
@@ -731,11 +758,12 @@ end
     <span class="kw">fn</span> <span class="ident">replace_escaped_simport</span>() {
         <span class="kw">let</span> <span class="ident">escaped_import_chapter</span> <span class="op">=</span> <span class="ident">make_escaped_import_chapter</span>();
 
-        <span class="comment">// Spacing an indentation is intentional</span>
-        <span class="kw">let</span> <span class="ident">expected_content</span> <span class="op">=</span> <span class="string">r#&quot;# Escaped Superimport
+        <span class="comment">// Spacing an indentation is intentional.</span>
+        <span class="comment">// We&#39;re testing that the</span>
+        <span class="kw">let</span> <span class="ident">expected_content</span> <span class="op">=</span> <span class="string">r#&quot;# Escaped Bookimport
 
 ```
-\{{#superimport ./ignored.txt@foo-bar}}
+/{{#bookimport ./ignored.txt@foo-bar}}
 ```
 &quot;#</span>;
 
@@ -782,4 +810,4 @@ end
     }
 }
 </pre></div>
-</section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g., <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g., <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g., <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../";window.currentCrate = "mdbook_superimport";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g., <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g., <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g., <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../";window.currentCrate = "mdbook_bookimport";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
