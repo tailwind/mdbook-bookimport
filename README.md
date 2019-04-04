@@ -28,7 +28,7 @@ cargo install mdbook-bookimport
 ```
 
 ```md
-<!-- In your markdown files -->
+<!-- Your markdown file before processing -->
 
 {{#bookimport ../path/to/file.foo@some-tag-name-here}}
 ```
@@ -47,6 +47,18 @@ fn main () {
 
   // @book end some-tag-name-here
 }
+```
+
+```md
+<!-- Your markdown file after processing -->
+
+
+  // ...
+  let imported = "This will be imported!"
+  let also_imported = "Everyting between start/end gets imported."
+  // ...
+
+
 ```
 
 ## [Full Guide](https://tailwind.github.io/mdbook-bookimport/)
