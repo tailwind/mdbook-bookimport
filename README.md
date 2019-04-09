@@ -69,6 +69,12 @@ fn main () {
 
 [API](https://tailwind.github.io/mdbook-bookimport/api/mdbook_bookimport)
 
+## Troubleshooting
+
+If for some reason something ever went wrong for any reason..:
+
+`RUST_LOG=debug mdbook build` would give more information.
+
 ## To Test
 
 ```sh
